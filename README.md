@@ -7,11 +7,11 @@ Kalibracja kamery zdarzeniowej
 - Kamera wizyjna  - Ramka oznaczona czasem pobrania (w nazwie lub logger)
 2. Konwersja piku . raw  ze zdarzeniami do formatu .h5 akceptowanego przez e2vid
 - .raw do .dat z metavision_sdk api:
-- ```bash
+```
 metavision_file_to_dat -i FILE_NAME.raw
 ```
 - z .dat do .h5 przy wykorzystaniu sktryptu convert.py z pakietu e2calib
-```bash
+```
 python3 convert.py FILENAME.dat --output_file OUT_FILENAME.h5
 ```
 3. Przygotowanie timestampów ramek do konwersji e2vid – skrypt:  timestamps_e2vid
@@ -21,7 +21,7 @@ python3 convert.py FILENAME.dat --output_file OUT_FILENAME.h5
 python offline_reconstruction.py --timestamps_file <timestamps>.txt --upsample_rate 1 --h5file <file_in>.h5  --output_folder <folder_out> --height <height> --width  <width> 
 ```
 5. Kalibracja z użyciem skryptu python_stereo_camera_calibration/calib.py – Wymaga modyfikacji ścieżek i pliku YAML wg potrzeb.
-``` bash
+```
 python3 calib.py
 ```
 kod pomocniczy, autorski na github:
