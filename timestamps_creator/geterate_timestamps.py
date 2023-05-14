@@ -11,7 +11,7 @@ def write_timestamps(timestamps_file, interval):
         timestamps.append(current_timestamp)
         current_timestamp += interval
         counter += 1
-    np.savetxt('timestamps.txt', np.array(timestamps), '%i') 
+    np.savetxt(timestamps_file, np.array(timestamps), '%i')
 
 if __name__ == "__main__":
     interval = (1/30)*1e6
