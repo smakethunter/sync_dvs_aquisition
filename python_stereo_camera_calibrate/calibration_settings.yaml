@@ -5,9 +5,9 @@ frame_height: 720
 mono_calibration_frames: 10
 stereo_calibration_frames: 10
 view_resize: 1
-checkerboard_box_size_scale : 3.19
-checkerboard_rows: 4
-checkerboard_columns: 7
+checkerboard_box_size_scale : 2.8
+checkerboard_rows: 5
+checkerboard_columns: 8
 cooldown: 100
 images_prefix_e2vid: /home/wojciech/Dokumenty/studia/dvs/e2calib/python/samsung_gen3/e2calib/*
-images_prefix_global_shutter: "./*"
+images_prefix_global_shutter: /Users/smaket/PycharmProjects/sync_dvs_aquisition/transformation/frames_test/*

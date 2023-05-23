@@ -120,14 +120,15 @@ def calibrate_camera_for_intrinsic_parameters(images_prefix):
     
     #NOTE: images_prefix contains camera name: "frames/camera0*".
     images_names = glob.glob(images_prefix)
-
+    print(images_names)
     #read all frames
     im_names = [imname for imname in images_names]
-    images = [cv.imread(imname, 1) for imname in images_names]
-
+    images = [cv.imread(imname) for imname in images_names]
+    print([shape.shape for shape in images])
     #criteria used by checkerboard pattern detector.
     #Change this if the code can't find the checkerboard. 
-    criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 100, 0.001)
+    criteria = (cv.TERM_CRITERIA_EPS + cv.TermCriteria_COUNT, 40, 0.001)
+
 
     rows = calibration_settings['checkerboard_rows']
     columns = calibration_settings['checkerboard_columns']
@@ -135,8 +136,8 @@ def calibrate_camera_for_intrinsic_parameters(images_prefix):
 
     #coordinates of squares in the checkerboard world space
     objp = np.zeros((rows*columns,3), np.float32)
-    objp[:,:2] = np.mgrid[0:rows,0:columns].T.reshape(-1,2)
-    objp = world_scaling* objp
+    objp[:, :2] = np.mgrid[0:rows, 0:columns].T.reshape(-1,2)
+    objp = world_scaling * objp
 
     #frame dimensions. Frames should be the same size.
     width = images[0].shape[1]
@@ -151,10 +152,12 @@ def calibrate_camera_for_intrinsic_parameters(images_prefix):
 
     for i, frame in enumerate(images):
         gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        print(gray)
+        cv.imwrite(f"tests/camera_parameters/photos/gray/{i}_frame.jpg", gray[gray.shape[0]//5:gray.shape[0]-gray.shape[0]//5,
+                                                gray.shape[1]//4:gray.shape[1]-gray.shape[1]//4])
 
         #find the checkerboard
-        ret, corners = cv.findChessboardCorners(gray, (rows, columns), None)
-
+        ret, corners = cv.findChessboardCorners(gray, (columns, rows), None)
         if ret == True:
 
             #Convolution size used to improve corner detection. Don't make this too large.
@@ -162,18 +165,14 @@ def calibrate_camera_for_intrinsic_parameters(images_prefix):
 
             #opencv can attempt to improve the checkerboard coordinates
             corners = cv.cornerSubPix(gray, corners, conv_size, (-1, -1), criteria)
-            cv.drawChessboardCorners(frame, (rows,columns), corners, ret)
-            cv.imwrite(f"camera_parameters/photos/{i}_frame.jpg",frame)
+            cv.drawChessboardCorners(frame, (rows, columns), corners, ret)
+            cv.imwrite(f"tests/camera_parameters/photos/corners_globalshutter/{i}_frame.jpg", frame)
 
-            # if k & 0xFF == ord('s'):
-            #     print('skipping')
-            #     continue
 
             objpoints.append(objp)
             imgpoints.append(corners)
 
 
-    cv.destroyAllWindows()
     ret, cmtx, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, (width, height), None, None)
     print('rmse:', ret)
     print('camera matrix:\n', cmtx)
@@ -476,6 +475,7 @@ def save_extrinsic_calibration_parameters(R0, T0, R1, T1, prefix = ''):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Obtains frame timestaps in microseconds with respect to .raw file aquisition time')
     parser.add_argument('--yaml_file', '-f', help='Yaml file for globals', default='calibration_settings.yaml')
+    parser.add_argument('--option', '-o', help='function to do', default='stereo')
 
     args = parser.parse_args()
     
@@ -492,30 +492,37 @@ if __name__ == '__main__':
     """Step2. Obtain camera intrinsic matrices and save them"""
     #camera0 intrinsics
     # images_prefix_global_shutter = ""
-    cmtx0, dist0 = calibrate_camera_for_intrinsic_parameters(calibration_settings['images_prefix_global_shutter']) 
-    save_camera_intrinsics(cmtx0, dist0, 'camera0') #this will write cmtx and dist to disk
-    # #camera1 intrinsics
-    # images_prefix_e2vid = "/home/wojciech/Dokumenty/studia/dvs/e2calib/python/samsung_gen3/e2calib/*"
-    cmtx1, dist1 = calibrate_camera_for_intrinsic_parameters(calibration_settings['images_prefix_e2vid'])
-    print(cmtx1,dist1)
-    save_camera_intrinsics(cmtx1, dist1, 'camera1') #this will write cmtx and dist to disk
+    if args.option == 'stereo':
+        cmtx0, dist0 = calibrate_camera_for_intrinsic_parameters(calibration_settings['images_prefix_global_shutter'])
+        save_camera_intrinsics(cmtx0, dist0, 'camera0') #this will write cmtx and dist to disk
+        # #camera1 intrinsics
+        # images_prefix_e2vid = "/home/wojciech/Dokumenty/studia/dvs/e2calib/python/samsung_gen3/e2calib/*"
+        cmtx1, dist1 = calibrate_camera_for_intrinsic_parameters(calibration_settings['images_prefix_e2vid'])
+        print(cmtx1,dist1)
+        save_camera_intrinsics(cmtx1, dist1, 'camera1') #this will write cmtx and dist to disk
 
 
-    # """Step3. Save calibration frames for both cameras simultaneously"""
-    # save_frames_two_cams('camera0', 'camera1') #save simultaneous frames
+        # """Step3. Save calibration frames for both cameras simultaneously"""
+        # save_frames_two_cams('camera0', 'camera1') #save simultaneous frames
 
 
-    """Step4. Use paired calibration pattern frames to obtain camera0 to camera1 rotation and translation"""
-    frames_prefix_c0 = calibration_settings['images_prefix_global_shutter']
-    frames_prefix_c1 = calibration_settings['images_prefix_e2vid']
-    R, T = stereo_calibrate(cmtx0, dist0, cmtx1, dist1, frames_prefix_c0, frames_prefix_c1)
-    #create folder if it does not exist
-    if not os.path.exists('camera_parameters'):
-        os.mkdir('camera_parameters')
-    np.savetxt("camera_parameters/R.txt", R, fmt='%1.6e')
-    np.savetxt("camera_parameters/T.txt", T, fmt='%1.6e')
+        """Step4. Use paired calibration pattern frames to obtain camera0 to camera1 rotation and translation"""
+        frames_prefix_c0 = calibration_settings['images_prefix_global_shutter']
+        frames_prefix_c1 = calibration_settings['images_prefix_e2vid']
+        R, T = stereo_calibrate(cmtx0, dist0, cmtx1, dist1, frames_prefix_c0, frames_prefix_c1)
+        #create folder if it does not exist
+        if not os.path.exists('camera_parameters'):
+            os.mkdir('camera_parameters')
+        np.savetxt("camera_parameters/R.txt", R, fmt='%1.6e')
+        np.savetxt("camera_parameters/T.txt", T, fmt='%1.6e')
+    elif args.option == 'intrisic_global_shutter':
+        cmtx0, dist0 = calibrate_camera_for_intrinsic_parameters(calibration_settings['images_prefix_global_shutter'])
+        save_camera_intrinsics(cmtx0, dist0, 'camera0')
+        print(cmtx0, dist0)
+    else:
+        pass
 
-    # """Step5. Save calibration data where camera0 defines the world space origin."""
+        # """Step5. Save calibration data where camera0 defines the world space origin."""
     # #camera0 rotation and translation is identity matrix and zeros vector
     # R0 = np.eye(3, dtype=np.float32)
     # T0 = np.array([0., 0., 0.]).reshape((3, 1))
